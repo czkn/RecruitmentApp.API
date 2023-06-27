@@ -33,15 +33,20 @@ namespace RecruitmentApp.API.Jobs;
             return jobsSortedByCreationDate.Select(j => j.JobToGetJobDto()).ToList();
         }
         
-        [HttpGet("{userId}")]
-        public async Task<ActionResult<IEnumerable<GetJobDTO>>> GetJobsCreatedByHrUser(Guid userId)
+        [HttpGet]
+        [Route("CreatedByHrUser")]
+        public async Task<ActionResult<IEnumerable<GetJobDTO>>> GetJobsCreatedByHrUser()
         {
             var jobs = await _context.Jobs
                 .Include(c => c.Candidates)
                 .Include(e => e.Employees)
                 .ToListAsync();
+            
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            var jobsCreatedByHrUser = jobs.Where(j => j.UserId == userId).ToList();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
+
+            var jobsCreatedByHrUser = jobs.Where(j => j.UserId == user?.Id).ToList();
             
             var jobsSortedByCreationDate = jobsCreatedByHrUser.OrderByDescending(j => j.CreationDate).ToList();
 
@@ -50,16 +55,18 @@ namespace RecruitmentApp.API.Jobs;
             return jobsDto;
         }
 
-        [HttpPost("{userId}")]
-        public async Task<ActionResult<Job>> PostJob(CreateJobDTO createJobDto, Guid userId)
+        [HttpPost]
+        public async Task<ActionResult<Job>> PostJob(CreateJobDTO createJobDto)
         {
             if (!ModelState.IsValid) 
                 return BadRequest("The model state is not valid");
             
             var job = createJobDto.CreateJobDtoToJob();
             
-            var user = await _context.Users.FindAsync(userId);
-    
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
+
             if (user == null)
             {
                 return NotFound();
@@ -75,8 +82,8 @@ namespace RecruitmentApp.API.Jobs;
             return Created("Created a Job", createJobDto);
         }
         
-        [HttpDelete("{jobId}, {userId}")]
-        public async Task<IActionResult> DeleteJob(Guid jobId, Guid userId)
+        [HttpDelete("{jobId}")]
+        public async Task<IActionResult> DeleteJob(Guid jobId)
         {
             var job = await _context.Jobs.FindAsync(jobId);
     
@@ -85,7 +92,9 @@ namespace RecruitmentApp.API.Jobs;
                 return NotFound();
             }
 
-            var user = await _context.Users.FindAsync(userId);
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
     
             if (user == null)
             {

@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -18,20 +19,24 @@ namespace RecruitmentApp.API.Candidates
             _fileService = fileService;
         }
 
-        [HttpGet("{userId}")]
-        public async Task<ActionResult<IEnumerable<GetCandidateDTO>>> GetCandidates(Guid userId)
+        [HttpGet]
+        public async Task<ActionResult<IEnumerable<GetCandidateDTO>>> GetCandidates()
         {
             var candidates = await _context.Candidates.ToListAsync();
+            
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
 
-            var candidatesAssignedToHrUser = candidates.Where(c => c.UserId == userId).ToList();
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
+
+            var candidatesAssignedToHrUser = candidates.Where(c => c.UserId == user?.Id).ToList();
 
             var candidatesDto = candidatesAssignedToHrUser.Select(c => c.CandidateToGetCandidateDto()).ToList();
             
             return candidatesDto;
         }
 
-        [HttpGet("{candidateId}/GetCandidateCv,{userId}")]
-        public async Task<IActionResult> GetCandidateCv(Guid candidateId, Guid userId)
+        [HttpGet("{candidateId}/GetCandidateCv")]
+        public async Task<IActionResult> GetCandidateCv(Guid candidateId)
         {
             var candidate = _context.Candidates
                 .FirstOrDefault(c => c.Id == candidateId);
@@ -41,7 +46,9 @@ namespace RecruitmentApp.API.Candidates
                 return NotFound();
             }
             
-            var user = await _context.Users.FindAsync(userId);
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
             
             if (user == null)
             {
@@ -93,8 +100,8 @@ namespace RecruitmentApp.API.Candidates
             return Created("Created a Candidate", createCandidateDto);
         }
 
-        [HttpDelete("{candidateId}, {userId}")]
-        public async Task<ActionResult> DeleteCandidate(Guid candidateId, Guid userId)
+        [HttpDelete("{candidateId}")]
+        public async Task<ActionResult> DeleteCandidate(Guid candidateId)
         {
             var candidate = await _context.Candidates.FindAsync(candidateId);
             
@@ -103,7 +110,9 @@ namespace RecruitmentApp.API.Candidates
                 return NotFound();
             }
             
-            var user = await _context.Users.FindAsync(userId);
+            var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
     
             if (user == null)
             {

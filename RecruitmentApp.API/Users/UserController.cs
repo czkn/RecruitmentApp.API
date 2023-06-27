@@ -120,25 +120,7 @@ public class UserController : ControllerBase
 
         return Ok(roleClaim.Value);
     }
-    
-    [Authorize(Policy = "AdminOrHrPolicy")]
-    [HttpGet]
-    [Route("getUserId")]
-    public async Task<IActionResult> GetUserId()
-    {
-        var identity = (ClaimsIdentity)User.Identity;
-        var userEmailClaim = identity.FindFirst(ClaimTypes.Email);
-        
-        var user = await _userManager.FindByEmailAsync(userEmailClaim.Value);
 
-        if (user == null)
-        {
-            return NotFound();
-        }
-
-        return Ok(user.Id);
-    }
-    
     [Authorize(Policy = "AdminPolicy")]
     [HttpDelete("{userEmail}")]
     public async Task<IActionResult> DeleteUser(string userEmail)

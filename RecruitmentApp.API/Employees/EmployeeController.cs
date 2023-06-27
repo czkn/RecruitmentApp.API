@@ -1,5 +1,7 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 
 namespace RecruitmentApp.API.Employees;
 
@@ -15,8 +17,8 @@ public class EmployeeController : ControllerBase
         _context = context;
     }
     
-    [HttpPost("{userId}, {jobId}, {candidateId}")]
-    public async Task<ActionResult<Employee>> PostEmployee(CreateEmployeeDTO createEmployeeDto, Guid userId, Guid jobId, Guid candidateId)
+    [HttpPost("{jobId}, {candidateId}")]
+    public async Task<ActionResult<Employee>> PostEmployee(CreateEmployeeDTO createEmployeeDto, Guid jobId, Guid candidateId)
     {
         if (!ModelState.IsValid) 
             return BadRequest("The model state is not valid");
@@ -48,7 +50,9 @@ public class EmployeeController : ControllerBase
             return Unauthorized("You can not add an Employee when there is no Candidate for this Job");
         }
         
-        var user = await _context.Users.FindAsync(userId);
+        var userEmailClaim = User.FindFirst(ClaimTypes.Email)?.Value;
+
+        var user = await _context.Users.FirstOrDefaultAsync(u => u.Email == userEmailClaim);
         
         if (user == null)
         {
